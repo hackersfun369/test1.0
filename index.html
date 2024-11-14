@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        input[type="text"] {
+            width: 300px;
+            padding: 10px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .song {
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .song img {
+            width: 100px; /* Adjust size as needed */
+            height: auto;
+            margin-right: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search for a Song</h1>
+    <input type="text" id="songName" placeholder="Enter song name">
+    <button id="searchButton">Search</button>
+    
+    <div id="results"></div>
+
+    <script>
+        document.getElementById('searchButton').addEventListener('click', () => {
+            const songName = document.getElementById('songName').value;
+
+            fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ songName }),
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json(); // Get the response as JSON
+                }
+                throw new Error('Song not found or an error occurred.');
+            })
+            .then(songs => {
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = ''; // Clear previous results
+
+                songs.forEach(song => {
+                    const songDiv = document.createElement('div');
+                    songDiv.classList.add('song');
+                    songDiv.innerHTML = `
+                        <img src="${song.thumbnail}" alt="${song.title}">
+                        <div>
+                            <strong>${song.title}</strong> by ${song.artist}
+                            <br>
+                            <audio controls id="audio-${song.videoId}" style="display:none;">
+                                <source src="" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                        </div>
+                    `;
+                    resultsDiv.appendChild(songDiv);
+
+                    // Automatically fetch audio URL for each song
+                    fetch(`/audio/${song.videoId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const audioElement = document.getElementById(`audio-${song.videoId}`);
+                            const sourceElement = audioElement.querySelector('source');
+                            sourceElement.src = data.audioUrl; // Set the audio URL
+                            audioElement.load(); // Load the new audio source
+                            audioElement.style.display = 'block'; // Show the audio player
+                        })
+                        .catch(error => {
+                            console.error(error);
+                            alert('Error fetching audio URL.');
+                        });
+                });
+            })
+            .catch(error => {
+                console.error(error);
+                alert(error.message);
+            });
+        });
+    </script>
+</body>
+</html>
